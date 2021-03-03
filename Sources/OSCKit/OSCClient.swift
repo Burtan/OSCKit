@@ -43,7 +43,7 @@ public class OSCClient : NSObject, GCDAsyncSocketDelegate, GCDAsyncUdpSocketDele
     
     public var isConnected: Bool {
         get {
-            guard let sock = self.socket else { return false }
+            guard let sock = socket else { return false }
             return sock.isConnected
         }
     }
@@ -59,7 +59,7 @@ public class OSCClient : NSObject, GCDAsyncSocketDelegate, GCDAsyncUdpSocketDele
             if let aInterface = interface, aInterface.isEmpty {
                 interface = nil
             }
-            guard let sock = self.socket else { return }
+            guard let sock = socket else { return }
             sock.interface = interface
         }
     }
@@ -69,15 +69,15 @@ public class OSCClient : NSObject, GCDAsyncSocketDelegate, GCDAsyncUdpSocketDele
             if let aHost = host, aHost.isEmpty {
                 host = nil
             }
-            guard let sock = self.socket else { return }
-            sock.host = host
+            guard let sock = socket else { return }
+            sock.targetHost = host
         }
     }
     
     public var port: UInt16 = 24601 {
         didSet {
-            guard let sock = self.socket else { return }
-            sock.port = port
+            guard let sock = socket else { return }
+            sock.outPort = port
         }
     }
     public var streamFraming: OSCTCPStreamFraming = .SLIP
@@ -87,34 +87,34 @@ public class OSCClient : NSObject, GCDAsyncSocketDelegate, GCDAsyncUdpSocketDele
     }
     
     internal func createSocket() {
-        if self.useTCP {
+        if useTCP {
             let tcpSocket = GCDAsyncSocket(delegate: self, delegateQueue: DispatchQueue.main)
-            self.socket = OSCSocket(with: tcpSocket)
-            guard let sock = self.socket else { return }
-            self.readState.setValue(sock, forKey: "socket")
-            self.readState.setValue(false, forKey: "dangling_ESC")
+            socket = OSCSocket(with: tcpSocket)
+            guard let sock = socket else { return }
+            readState.setValue(sock, forKey: "socket")
+            readState.setValue(false, forKey: "dangling_ESC")
         } else {
             let udpSocket = GCDAsyncUdpSocket(delegate: self, delegateQueue: DispatchQueue.main)
-            self.socket = OSCSocket(with: udpSocket)
+            socket = OSCSocket(with: udpSocket)
         }
-        guard let sock = self.socket else { return }
-        sock.interface = self.interface
-        sock.host = self.host
-        sock.port = self.port
+        guard let sock = socket else { return }
+        sock.interface = interface
+        sock.targetHost = host
+        sock.outPort = port
     }
     
     internal func destroySocket() {
-        self.readState.removeObject(forKey: "socket")
-        self.readState.removeObject(forKey: "dangling_ESC")
-        self.socket?.disconnect()
-        self.socket = nil
+        readState.removeObject(forKey: "socket")
+        readState.removeObject(forKey: "dangling_ESC")
+        socket?.disconnect()
+        socket = nil
     }
     
     public func connect() throws {
-        if self.socket == nil {
+        if socket == nil {
             createSocket()
         }
-        guard let sock = self.socket else { return }
+        guard let sock = socket else { return }
         try sock.connect()
         if let tcpSocket = sock.tcpSocket, sock.isTCPSocket {
             tcpSocket.readData(withTimeout: -1, tag: 0)
@@ -122,20 +122,20 @@ public class OSCClient : NSObject, GCDAsyncSocketDelegate, GCDAsyncUdpSocketDele
     }
     
     public func disconnect() {
-        self.socket?.disconnect()
-        self.readData = NSMutableData()
-        self.readState.setValue(false, forKey: "dangling_ESC")
+        socket?.disconnect()
+        readData = NSMutableData()
+        readState.setValue(false, forKey: "dangling_ESC")
     }
     
     public func send(packet: OSCPacket) {
-        if self.socket == nil {
+        if socket == nil {
             do {
                 try connect()
             } catch {
                 debugDelegate?.debugLog("Could not send establish connection to send packet.")
             }
         }
-        guard let sock = self.socket else {
+        guard let sock = socket else {
             debugDelegate?.debugLog("Error: Could not send data; no socket available.")
             return
         }
@@ -151,7 +151,7 @@ public class OSCClient : NSObject, GCDAsyncSocketDelegate, GCDAsyncUdpSocketDele
     // MARK: GCDAsyncSocketDelegate
     
     public func newSocketQueueForConnection(fromAddress address: Data, on sock: GCDAsyncSocket) -> DispatchQueue? {
-        return nil
+        nil
     }
     
     public func socket(_ sock: GCDAsyncSocket, didAcceptNewSocket newSocket: GCDAsyncSocket) {
@@ -160,14 +160,14 @@ public class OSCClient : NSObject, GCDAsyncSocketDelegate, GCDAsyncUdpSocketDele
     
     public func socket(_ sock: GCDAsyncSocket, didConnectToHost host: String, port: UInt16) {
         debugDelegate?.debugLog("Client Socket: \(sock) didConnectToHost: \(host):\(port)")
-        guard let delegate = self.delegate else { return }
+        guard let delegate = delegate else { return }
         delegate.clientDidConnect(client: self)
     }
     
     public func socket(_ sock: GCDAsyncSocket, didRead data: Data, withTag tag: Int) {
         debugDelegate?.debugLog("Client Socket: \(sock) didRead Data of length: \(data.count), withTag: \(tag)")
         
-        guard let delegate = self.delegate else { return }
+        guard let delegate = delegate else { return }
         do {
             try OSCParser().translate(OSCData: data, streamFraming: streamFraming, to: readData, with: readState, andDestination: delegate)
             sock.readData(withTimeout: -1, tag: tag)
@@ -200,15 +200,15 @@ public class OSCClient : NSObject, GCDAsyncSocketDelegate, GCDAsyncUdpSocketDele
     
     public func socketDidCloseReadStream(_ sock: GCDAsyncSocket) {
         debugDelegate?.debugLog("Client Socket: \(sock) didCloseReadStream")
-        self.readData.setData(Data())
-        self.readState.setValue(false, forKey: "dangling_ESC")
+        readData.setData(Data())
+        readState.setValue(false, forKey: "dangling_ESC")
     }
     
     public func socketDidDisconnect(_ sock: GCDAsyncSocket, withError err: Error?) {
         debugDelegate?.debugLog("Client Socket: \(sock) didDisconnect, withError: \(err.debugDescription)")
-        self.readData.setData(Data())
-        self.readState.setValue(false, forKey: "dangling_ESC")
-        guard let delegate = self.delegate else { return }
+        readData.setData(Data())
+        readState.setValue(false, forKey: "dangling_ESC")
+        guard let delegate = delegate else { return }
         delegate.clientDidDisconnect(client: self)
     }
     

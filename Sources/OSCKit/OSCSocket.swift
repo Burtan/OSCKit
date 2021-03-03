@@ -35,66 +35,65 @@ public class OSCSocket {
     public private(set) var tcpSocket: GCDAsyncSocket?
     public private(set) var udpSocket: GCDAsyncUdpSocket?
     public var interface: String?
-    public var host: String?
-    public var port: UInt16 = 0
+    public var targetHost: String?
+    public var inPort: UInt16 = 0
+    public var outPort: UInt16 = 0
     
     public weak var delegate: OSCDebugDelegate?
     
     public var isConnected: Bool {
         get {
-            if self.isTCPSocket {
-                guard let socket = self.tcpSocket else { return false }
+            if isTCPSocket {
+                guard let socket = tcpSocket else { return false }
                 return socket.isConnected
             } else {
-                guard let socket = self.udpSocket else { return false }
+                guard let socket = udpSocket else { return false }
                 return socket.isConnected()
             }
         }
     }
     
     public func reusePort(reuse: Bool) throws {
-        guard let socket = self.udpSocket else { return }
+        guard let socket = udpSocket else { return }
         try socket.enableReusePort(reuse)
     }
     
     public var isTCPSocket: Bool {
         get {
-            return self.tcpSocket != nil
+            tcpSocket != nil
         }
     }
     
     public var isUDPSocket: Bool {
         get {
-            return self.udpSocket != nil
+            udpSocket != nil
         }
     }
     
     init(with tcpSocket: GCDAsyncSocket) {
         self.tcpSocket = tcpSocket
-        self.udpSocket = nil
-        self.interface = nil
-        self.host = "localhost"
+        udpSocket = nil
+        interface = nil
     }
     
     init(with udpSocket: GCDAsyncUdpSocket) {
         self.udpSocket = udpSocket
-        self.tcpSocket = nil
-        self.interface = nil
-        self.host = "localhost"
+        tcpSocket = nil
+        interface = nil
     }
     
     deinit {
-        self.tcpSocket?.delegate = nil
-        self.tcpSocket?.disconnect()
-        self.tcpSocket = nil
+        tcpSocket?.delegate = nil
+        tcpSocket?.disconnect()
+        tcpSocket = nil
         
-        self.udpSocket?.setDelegate(nil)
-        self.udpSocket = nil
+        udpSocket?.setDelegate(nil)
+        udpSocket = nil
     }
     
     func joinMulticast(group: String) throws {
         guard let socket = udpSocket else { return }
-        if let aInterface = self.interface {
+        if let aInterface = interface {
             try socket.joinMulticastGroup(group, onInterface: aInterface)
         } else {
             try socket.joinMulticastGroup(group)
@@ -104,7 +103,7 @@ public class OSCSocket {
     
     func leaveMulticast(group: String) throws {
         guard let socket = udpSocket else { return }
-        if let aInterface = self.interface {
+        if let aInterface = interface {
             try socket.leaveMulticastGroup(group, onInterface: aInterface)
         } else {
             try socket.leaveMulticastGroup(group)
@@ -114,32 +113,32 @@ public class OSCSocket {
     
     func startListening() throws {
         
-        if let socket = self.tcpSocket {
-            if let aInterface = self.interface  {
-                delegate?.debugLog("TCP Socket - Start Listening on Interface: \(aInterface), withPort: \(port)")
-                try socket.accept(onInterface: aInterface, port: port)
+        if let socket = tcpSocket {
+            if let aInterface = interface  {
+                delegate?.debugLog("TCP Socket - Start Listening on Interface: \(aInterface), withPort: \(inPort)")
+                try socket.accept(onInterface: aInterface, port: inPort)
             } else {
-                delegate?.debugLog("TCP Socket - Start Listening on Port: \(port)")
-                try socket.accept(onPort: port)
+                delegate?.debugLog("TCP Socket - Start Listening on Port: \(inPort)")
+                try socket.accept(onPort: inPort)
             }
         }
-        if let socket = self.udpSocket {
-            if let aInterface = self.interface {
-                delegate?.debugLog("UDP Socket - Start Listening on Interface: \(aInterface), withPort: \(port)")
-                try socket.bind(toPort: port, interface: aInterface)
+        if let socket = udpSocket {
+            if let aInterface = interface {
+                delegate?.debugLog("UDP Socket - Start Listening on Interface: \(aInterface), withPort: \(inPort)")
+                try socket.bind(toPort: inPort, interface: aInterface)
                 try socket.beginReceiving()
             } else {
-                delegate?.debugLog("UDP Socket - Start Listening on Port: \(port)")
-                try socket.bind(toPort: port)
+                delegate?.debugLog("UDP Socket - Start Listening on Port: \(inPort)")
+                try socket.bind(toPort: inPort)
                 try socket.beginReceiving()
             }
         }
     }
     
     func startListening(with groups: [String]) throws {
-        if let socket = self.udpSocket {
-            delegate?.debugLog("UDP Socket - Start Listening on Port: \(port)")
-            try socket.bind(toPort: port)
+        if let socket = udpSocket {
+            delegate?.debugLog("UDP Socket - Start Listening on Port: \(inPort)")
+            try socket.bind(toPort: inPort)
             try socket.beginReceiving()
             for group in groups {
                 try joinMulticast(group: group)
@@ -148,33 +147,33 @@ public class OSCSocket {
     }
     
     func stopListening() {
-        if self.isTCPSocket {
-            guard let socket = self.tcpSocket else { return }
+        if isTCPSocket {
+            guard let socket = tcpSocket else { return }
             socket.disconnectAfterWriting()
             delegate?.debugLog("TCP Socket - Stop Listening)")
         } else {
-            guard let socket = self.udpSocket else { return }
+            guard let socket = udpSocket else { return }
             socket.close()
             delegate?.debugLog("UDP Socket - Stop Listening)")
         }
     }
     
     func connect() throws {
-        guard let socket = self.tcpSocket, let aHost = self.host, self.isTCPSocket else { return }
-        if let aInterface = self.interface {
-            try socket.connect(toHost: aHost, onPort: port, viaInterface: aInterface, withTimeout: -1)
+        guard let socket = tcpSocket, let aHost = targetHost, isTCPSocket else { return }
+        if let aInterface = interface {
+            try socket.connect(toHost: aHost, onPort: outPort, viaInterface: aInterface, withTimeout: -1)
         } else {
-            try socket.connect(toHost: aHost, onPort: port, withTimeout: -1)
+            try socket.connect(toHost: aHost, onPort: outPort, withTimeout: -1)
         }
     }
     
     func disconnect() {
-        guard let socket = self.tcpSocket else { return }
+        guard let socket = tcpSocket else { return }
         socket.disconnect()
     }
     
     public func sendTCP(packet: OSCPacket, withStreamFraming streamFraming: OSCTCPStreamFraming) {
-        if let socket = self.tcpSocket, !packet.packetData().isEmpty {
+        if let socket = tcpSocket, !packet.packetData().isEmpty {
             switch streamFraming {
             case .SLIP:
                 // Outgoing OSC Packets are framed using the double END SLIP protocol http://www.rfc-editor.org/rfc/rfc1055.txt
@@ -218,9 +217,9 @@ public class OSCSocket {
     }
     
     public func sendUDP(packet: OSCPacket) {
-        if let socket = self.udpSocket {
-            if let aInterface = self.interface {
-                let enableBroadcast = Interface.allInterfaces().contains(where: { $0.name == interface && ($0.broadcastAddress == host || "255.255.255.255" == host ) })
+        if let socket = udpSocket {
+            if let aInterface = interface {
+                let enableBroadcast = Interface.allInterfaces().contains(where: { $0.name == interface && ($0.broadcastAddress == targetHost || "255.255.255.255" == targetHost ) })
                 do {
                     try socket.enableBroadcast(enableBroadcast)
                 } catch {
@@ -233,8 +232,8 @@ public class OSCSocket {
                     delegate?.debugLog("Warning: \(socket) unable to bind interface")
                 }
             }
-            if let aHost = host {
-                socket.send(packet.packetData(), toHost: aHost, port: self.port, withTimeout: timeout, tag: 0)
+            if let aHost = targetHost {
+                socket.send(packet.packetData(), toHost: aHost, port: outPort, withTimeout: timeout, tag: 0)
                 socket.closeAfterSending()
             }
         }
@@ -245,9 +244,9 @@ public class OSCSocket {
 extension OSCSocket: CustomStringConvertible {
     public var description: String {
         if isTCPSocket {
-            return "TCP Socket \(self.host ?? "No Host"):\(self.port) isConnected = \(isConnected)"
+            return "TCP Socket \(targetHost ?? "No Host"):\(inPort) isConnected = \(isConnected)"
         } else {
-            return "UDP Socket \(self.host ?? "No Host"):\(self.port)"
+            return "UDP Socket \(targetHost ?? "No Host"):\(inPort)"
         }
     }
 }
