@@ -234,7 +234,6 @@ public class OSCSocket {
             }
             if let aHost = targetHost {
                 socket.send(packet.packetData(), toHost: aHost, port: outPort, withTimeout: timeout, tag: 0)
-                socket.closeAfterSending()
             }
         }
     }    
