@@ -29,7 +29,7 @@ import CocoaAsyncSocket
 
 public class OSCServer: NSObject, GCDAsyncUdpSocketDelegate {
 
-    private var socket: OSCSocket
+    private var socket = OSCSocket(with: GCDAsyncUdpSocket())
     private var readData = NSMutableData()
     private var readState = NSMutableDictionary()
     
@@ -60,14 +60,14 @@ public class OSCServer: NSObject, GCDAsyncUdpSocketDelegate {
     public var inPort: UInt16 = 0 {
         willSet {
             stopListening()
-            socket?.inPort = inPort
+            socket.inPort = inPort
         }
     }
     public var reusePort: Bool = false {
         willSet {
             stopListening()
             do {
-                try socket?.reusePort(reuse: newValue)
+                try socket.reusePort(reuse: newValue)
             } catch let error as NSError {
                 debugDelegate?.debugLog("Error: \(error.localizedDescription)")
             }
@@ -103,19 +103,12 @@ public class OSCServer: NSObject, GCDAsyncUdpSocketDelegate {
         socket.stopListening()
     }
     
-    internal func destroySocket() {
-        readState.removeObject(forKey: "socket")
-        readState.removeObject(forKey: "dangling_ESC")
-        socket?.disconnect()
-        socket = nil
-    }
-    
     public func connect() throws {
         try socket.connect()
     }
     
     public func disconnect() {
-        socket?.disconnect()
+        socket.disconnect()
         readData = NSMutableData()
         readState.setValue(false, forKey: "dangling_ESC")
     }
@@ -128,7 +121,7 @@ public class OSCServer: NSObject, GCDAsyncUdpSocketDelegate {
                 debugDelegate?.debugLog("Could not send establish connection to send packet.")
             }
         }
-        sock.sendUDP(packet: packet)
+        socket.sendUDP(packet: packet)
     }
     
     // MARK: GCDAsyncUDPSocketDelegate
@@ -139,7 +132,6 @@ public class OSCServer: NSObject, GCDAsyncUdpSocketDelegate {
         
         let rawReplySocket = GCDAsyncUdpSocket(delegate: self, delegateQueue: DispatchQueue.main)
         let replySocket = OSCSocket(with: rawReplySocket)
-        replySocket.interface = interface
         replySocket.targetHost = GCDAsyncUdpSocket.host(fromAddress: address)
         replySocket.inPort = inPort
         guard let packetDestination = delegate else { return }
