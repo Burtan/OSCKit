@@ -34,7 +34,7 @@ public class OSCServer: NSObject, GCDAsyncUdpSocketDelegate {
     private var readState = NSMutableDictionary()
     
     /// The delegate which receives debug log messages from this producer.
-    public weak var delegate: (OSCClientDelegate & OSCPacketDestination)?
+    public var delegate: (OSCClientDelegate & OSCPacketDestination)?
     
     /// The delegate which receives debug log messages from this producer.
     public weak var debugDelegate: OSCDebugDelegate?
