@@ -132,8 +132,6 @@ public class OSCServer: NSObject, GCDAsyncUdpSocketDelegate {
         
         let rawReplySocket = GCDAsyncUdpSocket(delegate: self, delegateQueue: DispatchQueue.main)
         let replySocket = OSCSocket(with: rawReplySocket)
-        replySocket.targetHost = GCDAsyncUdpSocket.host(fromAddress: address)
-        replySocket.inPort = inPort
         guard let packetDestination = delegate else { return }
         do {
             try OSCParser().process(OSCDate: data, for: packetDestination, with: replySocket)
