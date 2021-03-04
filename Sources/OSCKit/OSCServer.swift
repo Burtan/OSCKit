@@ -130,7 +130,7 @@ public class OSCServer: NSObject, GCDAsyncUdpSocketDelegate {
 
         debugDelegate?.debugLog("UDP Socket: \(sock) didReceiveData of Length: \(data.count), fromAddress \(address)")
         
-        let rawReplySocket = GCDAsyncUdpSocket(delegate: self, delegateQueue: DispatchQueue.main)
+/*        let rawReplySocket = GCDAsyncUdpSocket(delegate: self, delegateQueue: DispatchQueue.main)
         let replySocket = OSCSocket(with: rawReplySocket)
         guard let packetDestination = delegate else { return }
         do {
@@ -139,7 +139,7 @@ public class OSCServer: NSObject, GCDAsyncUdpSocketDelegate {
             debugDelegate?.debugLog("Error: Unrecognized data \(data)")
         } catch {
             debugDelegate?.debugLog("Other error: \(error)")
-        }
+        }*/
     }
     
     public func udpSocketDidClose(_ sock: GCDAsyncUdpSocket, withError error: Error?) {
