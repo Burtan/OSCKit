@@ -129,17 +129,15 @@ public class OSCServer: NSObject, GCDAsyncUdpSocketDelegate {
     public func udpSocket(_ sock: GCDAsyncUdpSocket, didReceive data: Data, fromAddress address: Data, withFilterContext filterContext: Any?) {
 
         debugDelegate?.debugLog("UDP Socket: \(sock) didReceiveData of Length: \(data.count), fromAddress \(address)")
-        
-/*        let rawReplySocket = GCDAsyncUdpSocket(delegate: self, delegateQueue: DispatchQueue.main)
-        let replySocket = OSCSocket(with: rawReplySocket)
+
         guard let packetDestination = delegate else { return }
         do {
-            try OSCParser().process(OSCDate: data, for: packetDestination, with: replySocket)
+            try OSCParser().process(OSCDate: data, for: packetDestination)
         } catch OSCParserError.unrecognisedData {
             debugDelegate?.debugLog("Error: Unrecognized data \(data)")
         } catch {
             debugDelegate?.debugLog("Other error: \(error)")
-        }*/
+        }
     }
     
     public func udpSocketDidClose(_ sock: GCDAsyncUdpSocket, withError error: Error?) {

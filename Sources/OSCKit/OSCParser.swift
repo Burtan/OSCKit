@@ -30,19 +30,19 @@ public class OSCParser {
     
     private var plhDataBuffer: Data?
     
-    public func process(OSCDate data: Data, for destination: OSCPacketDestination, with replySocket: OSCSocket) throws {
+    public func process(OSCDate data: Data, for destination: OSCPacketDestination) throws {
         guard let string = String(data: data.prefix(upTo: 1), encoding: .utf8) else {
             throw OSCParserError.unrecognisedData
         }
         if string == "/" { // OSC Messages begin with /
             do {
-                try process(OSCMessageData: data, for: destination, with: replySocket)
+                try process(OSCMessageData: data, for: destination)
             } catch {
                 throw error
             }
         } else if string == "#" { // OSC Bundles begin with #
             do {
-                try process(OSCBundleData: data, for: destination, with: replySocket)
+                try process(OSCBundleData: data, for: destination)
             } catch {
                 throw error
             }
@@ -51,21 +51,19 @@ public class OSCParser {
         }
     }
     
-    private func process(OSCMessageData data: Data, for destination: OSCPacketDestination, with replySocket: OSCSocket) throws {
+    private func process(OSCMessageData data: Data, for destination: OSCPacketDestination) throws {
         var startIndex = 0
         do {
             let message = try parseOSCMessage(with: data, startIndex: &startIndex)
-            message.replySocket = replySocket
             destination.take(message: message)
         } catch {
             throw error
         }
     }
     
-    private func process(OSCBundleData data: Data, for destination: OSCPacketDestination, with replySocket: OSCSocket) throws {
+    private func process(OSCBundleData data: Data, for destination: OSCPacketDestination) throws {
         do {
             let  bundle = try parseOSCBundle(with: data)
-            bundle.replySocket = replySocket
             destination.take(bundle: bundle)
         } catch {
             throw error
@@ -113,7 +111,7 @@ public class OSCParser {
                          */
                         guard !data.isEmpty else { break }
                         do {
-                            try process(OSCDate: data as Data, for: destination, with: socket)
+                            try process(OSCDate: data as Data, for: destination)
                             data.setData(Data())
                         } catch {
                             throw error
@@ -168,7 +166,7 @@ public class OSCParser {
                     let dataRange = buffer.startIndex + 4..<buffer.startIndex + Int(packetLength + 4)
                     let possibleOSCData = buffer.subdata(in: dataRange)
                     do {
-                        try process(OSCDate: possibleOSCData, for: destination, with: socket)
+                        try process(OSCDate: possibleOSCData, for: destination)
                         buffer.removeSubrange(dataRange)
                     } catch {
                         buffer.remove(at: 0)
