@@ -56,6 +56,7 @@ public class OSCServer: NSObject, GCDAsyncUdpSocketDelegate {
     }
     public var inPort: UInt16 = 0 {
         didSet {
+            socket.stopListening()
             socket.inPort = inPort
         }
     }
