@@ -44,11 +44,8 @@ public class OSCServer: NSObject, GCDAsyncUdpSocketDelegate {
             socket.isConnected
         }
     }
-    public var targetHost: String? = "localhost" {
+    public var targetHost = "localhost" {
         didSet {
-            if let aHost = targetHost, aHost.isEmpty {
-                targetHost = nil
-            }
             socket.targetHost = targetHost
         }
     }
@@ -58,19 +55,8 @@ public class OSCServer: NSObject, GCDAsyncUdpSocketDelegate {
         }
     }
     public var inPort: UInt16 = 0 {
-        willSet {
-            stopListening()
+        didSet {
             socket.inPort = inPort
-        }
-    }
-    public var reusePort: Bool = false {
-        willSet {
-            stopListening()
-            do {
-                try socket.reusePort(reuse: newValue)
-            } catch let error as NSError {
-                debugDelegate?.debugLog("Error: \(error.localizedDescription)")
-            }
         }
     }
         
@@ -78,9 +64,7 @@ public class OSCServer: NSObject, GCDAsyncUdpSocketDelegate {
         super.init()
         let udpSocket = GCDAsyncUdpSocket(delegate: self, delegateQueue: dispatchQueue)
         socket = OSCSocket(with: udpSocket)
-        socket.targetHost = targetHost
-        socket.outPort = outPort
-        socket.inPort = inPort
+        try? socket.reusePort(reuse: true)
     }
     
     convenience public override init() {
