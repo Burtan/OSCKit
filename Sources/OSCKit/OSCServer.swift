@@ -58,7 +58,7 @@ public class OSCServer: NSObject, GCDAsyncUdpSocketDelegate {
                 stopListening()
             }
             //create a new socket because binding the current socket to a new port is not possible
-            socket = GCDAsyncUdpSocket(self, delegateQueue: dispatchQueue)
+            socket = GCDAsyncUdpSocket(delegate: self, delegateQueue: dispatchQueue)
             if (listening) {
                 try startListening()
             }
