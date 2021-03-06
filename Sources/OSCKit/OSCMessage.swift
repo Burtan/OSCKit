@@ -33,8 +33,7 @@ public class OSCMessage: OSCPacket {
     public let arguments: [Any]
     public let typeTagString: String
     public let argumentTypes: [OSCArgument]
-    public var replySocket: OSCSocket? = nil
-    
+
     public init(with addressPattern: String, arguments: [Any] = []) {
         if addressPattern.isEmpty || addressPattern.count == 0 || addressPattern.first != "/" {
             self.addressPattern = "/"
@@ -43,7 +42,7 @@ public class OSCMessage: OSCPacket {
         }
         var parts = self.addressPattern.components(separatedBy: "/")
         parts.removeFirst()
-        self.addressParts = parts
+        addressParts = parts
         var newArguments: [Any] = []
         var newTypeTagString: String = ","
         var types: [OSCArgument] = []
@@ -95,8 +94,8 @@ public class OSCMessage: OSCPacket {
             newArguments.append(argument as Any)
         }
         self.arguments = newArguments
-        self.typeTagString = newTypeTagString
-        self.argumentTypes = types
+        typeTagString = newTypeTagString
+        argumentTypes = types
     }
     
     public func readdress(to addressPattern: String) {
@@ -107,12 +106,12 @@ public class OSCMessage: OSCPacket {
         }
         var parts = self.addressPattern.components(separatedBy: "/")
         parts.removeFirst()
-        self.addressParts = parts
+        addressParts = parts
     }
     
     public func packetData()->Data {
-        var result = self.addressPattern.oscStringData()
-        result.append(self.typeTagString.oscStringData())
+        var result = addressPattern.oscStringData()
+        result.append(typeTagString.oscStringData())
         for argument in arguments {
             if argument is String {
                 guard let stringArgument = argument as? String else {
@@ -164,7 +163,7 @@ extension String {
 
 extension Data {
     func oscBlobData()->Data {
-        let length = UInt32(self.count)
+        let length = UInt32(count)
         var data = Data()
         data.append(length.bigEndian.data)
         data.append(self)
@@ -178,7 +177,7 @@ extension Data {
 
 extension NSNumber {
     func oscIntData()->Data {
-        return Data(Int32(truncating: self).bigEndian.data)
+        Data(Int32(truncating: self).bigEndian.data)
     }
     
     func oscFloatData()->Data  {
@@ -193,4 +192,11 @@ extension NSNumber {
     }
 }
 
+extension Numeric {
 
+    var data: Data {
+        var source = self
+        return Data(bytes: &source, count: MemoryLayout<Self>.size)
+    }
+
+}

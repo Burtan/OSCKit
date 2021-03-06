@@ -29,77 +29,50 @@ import CocoaAsyncSocket
 
 public class OSCServer: NSObject, GCDAsyncUdpSocketDelegate {
 
-    private var socket: GCDAsyncUdpSocket
-    private var readData = NSMutableData()
-    private var readState = NSMutableDictionary()
-    
+    private var socket = GCDAsyncUdpSocket()
+    private var inPort: UInt16 = 0
+    private var isListening = false
+
     /// The delegate which receives debug log messages from this producer.
     public var delegate: OSCPacketDestination?
-    
-    /// The delegate which receives debug log messages from this producer.
-    public weak var debugDelegate: OSCDebugDelegate?
-
-    public var isConnected: Bool {
-        get {
-            socket.isConnected
-        }
-    }
-    public var targetHost = "localhost" {
-        didSet {
-            socket.targetHost = targetHost
-        }
-    }
-    public var outPort: UInt16 = 24601 {
-        didSet {
-            socket.outPort = outPort
-        }
-    }
-    public var inPort: UInt16 = 0 {
-        didSet {
-            socket.stopListening()
-            socket.inPort = inPort
-        }
-    }
+    public var targetHost = "localhost"
+    public var outPort: UInt16 = 24601
         
     public init(dispatchQueue: DispatchQueue = DispatchQueue.main) {
         super.init()
-        socket = GCDAsyncUdpSocket(delegate: self, delegateQueue: dispatchQueue)
+        socket.setDelegate(self, delegateQueue: dispatchQueue)
     }
     
     deinit {
         stopListening()
     }
-
-    public func startListening() {
-        do {
-            try socket.startListening()
-        } catch {
-            debugDelegate?.debugLog(error.localizedDescription)
+    
+    public func changeInPort(port: UInt16) throws {
+        inPort = port
+        if (isListening) {
+            stopListening()
+            try startListening()
         }
+    }
+
+    public func startListening() throws {
+        try socket.bind(toPort: inPort)
+        try socket.beginReceiving()
+        isListening = true
     }
     
     public func stopListening() {
-        socket.stopListening()
+        socket.close()
+        isListening = false
     }
     
     public func send(packet: OSCPacket) {
-        socket.sendUDP(packet: packet)
+        socket.send(packet.packetData(), toHost: targetHost, port: outPort, withTimeout: 3, tag: 0)
     }
-    
-    // MARK: GCDAsyncUDPSocketDelegate
-    
+        
     public func udpSocket(_ sock: GCDAsyncUdpSocket, didReceive data: Data, fromAddress address: Data, withFilterContext filterContext: Any?) {
-
-        debugDelegate?.debugLog("UDP Socket: \(sock) didReceiveData of Length: \(data.count), fromAddress \(address)")
-
         guard let packetDestination = delegate else { return }
-        do {
-            try OSCParser().process(OSCDate: data, for: packetDestination)
-        } catch OSCParserError.unrecognisedData {
-            debugDelegate?.debugLog("Error: Unrecognized data \(data)")
-        } catch {
-            debugDelegate?.debugLog("Other error: \(error)")
-        }
+        try? OSCParser().process(OSCDate: data, for: packetDestination)
     }
     
 }

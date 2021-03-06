@@ -42,12 +42,12 @@ public struct OSCAddressMethod: Hashable, Equatable {
         self.addressPattern = addressPattern
         var addressParts = addressPattern.components(separatedBy: "/")
         addressParts.removeFirst()
-        self.parts = addressParts
+        parts = addressParts
         self.completion = completion
     }
     
     public static func == (lhs: OSCAddressMethod, rhs: OSCAddressMethod) -> Bool {
-        return lhs.addressPattern == rhs.addressPattern
+        lhs.addressPattern == rhs.addressPattern
     }
     
     public func hash(into hasher: inout Hasher) {

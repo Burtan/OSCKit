@@ -29,16 +29,16 @@ import Foundation
 extension String {
     /// An `NSRange` that represents the full range of the string.
     var nsrange: NSRange {
-        return NSRange(location: 0, length: utf16.count)
+        NSRange(location: 0, length: utf16.count)
     }
     var doubleValue: Double? {
-        return Double(self)
+        Double(self)
     }
     var floatValue: Float? {
-        return Float(self)
+        Float(self)
     }
     var integerValue: Int? {
-        return Int(self)
+        Int(self)
     }
     var isNumber: Bool {
         if let _ = Double(self) {
@@ -362,11 +362,11 @@ public class OSCAnnotation {
     }
     
     private func isNumeric(character: Character) -> Bool {
-        return Double("\(character)") != nil
+        Double("\(character)") != nil
     }
     
     private func isNumeric(string: String) -> Bool {
-        return Double(string) != nil
+        Double(string) != nil
     }
     
 }

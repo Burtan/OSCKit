@@ -44,7 +44,7 @@ extension Interface {
     
     open var displayText : String {
         get {
-            return "\(self.displayName) (\(self.name)) - \(self.address ?? "")"
+            "\(self.displayName) (\(self.name)) - \(self.address ?? "")"
         }
     }
     #endif

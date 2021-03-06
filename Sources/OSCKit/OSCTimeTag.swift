@@ -37,9 +37,9 @@ public class OSCTimeTag {
         guard data.count == 8 else { return nil }
         let secondsNumber = data.subdata(in: data.startIndex ..< data.startIndex + 4).withUnsafeBytes { $0.load(as: UInt32.self) }.byteSwapped
         let fractionNumber = data.subdata(in: data.startIndex + 4 ..< data.startIndex + 8).withUnsafeBytes { $0.load(as: UInt32.self) }.byteSwapped
-        self.seconds = secondsNumber
-        self.fraction = fractionNumber
-        self.immediate = secondsNumber == 0 && fractionNumber == 1
+        seconds = secondsNumber
+        fraction = fractionNumber
+        immediate = secondsNumber == 0 && fractionNumber == 1
     }
     
     public init(withDate date: Date) {
@@ -47,30 +47,29 @@ public class OSCTimeTag {
         // Seconds between 1900 and 1970 = 2208988800
         let secondsSince1900 = date.timeIntervalSince1970 + 2208988800
         // Bitwise AND operator to get the first 32 bits of secondsSince1900 which is cast from a double to UInt64
-        self.seconds = UInt32(UInt64(secondsSince1900) & 0xffffffff)
+        seconds = UInt32(UInt64(secondsSince1900) & 0xffffffff)
         let fractionsPerSecond = Double(0xffffffff)
-        self.fraction = UInt32(fmod(secondsSince1900, 1.0) * fractionsPerSecond)
-        self.immediate = false
+        fraction = UInt32(fmod(secondsSince1900, 1.0) * fractionsPerSecond)
+        immediate = false
     }
     
     // immediate Time Tag
     public init() {
-        self.seconds = 0
-        self.fraction = 1
-        self.immediate = true
+        seconds = 0
+        fraction = 1
+        immediate = true
     }
     
     public func date()->Date {
         let date1900 = Date(timeIntervalSince1970: -2208988800)
-        var interval = TimeInterval(self.seconds)
-        interval += TimeInterval(Double(self.fraction) / 0xffffffff)
+        var interval = TimeInterval(seconds)
+        interval += TimeInterval(Double(fraction) / 0xffffffff)
         return date1900.addingTimeInterval(interval)
     }
     
     public func hex()->String {
-        return "\(self.seconds.byteArray().map{String(format: "%02X", $0)}.joined())\(self.fraction.byteArray().map{String(format: "%02X", $0)}.joined())"
+        "\(seconds.byteArray().map {String(format: "%02X", $0)}.joined())\(fraction.byteArray().map {String(format: "%02X", $0)}.joined())"
     }
-    
 
     func oscTimeTagData()->Data {
         var data = Data()
@@ -95,7 +94,7 @@ extension UInt32 {
 
 extension Date {
     func oscTimeTag()->OSCTimeTag {
-        return OSCTimeTag(withDate: self)
+        OSCTimeTag(withDate: self)
     }
 }
 
