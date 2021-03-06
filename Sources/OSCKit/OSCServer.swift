@@ -30,6 +30,7 @@ import CocoaAsyncSocket
 public class OSCServer: NSObject, GCDAsyncUdpSocketDelegate {
 
     private var socket = GCDAsyncUdpSocket()
+    private var dispatchQueue = DispatchQueue.main
     private var inPort: UInt16 = 0
     private var isListening = false
 
@@ -40,6 +41,7 @@ public class OSCServer: NSObject, GCDAsyncUdpSocketDelegate {
         
     public init(dispatchQueue: DispatchQueue = DispatchQueue.main) {
         super.init()
+        self.dispatchQueue = dispatchQueue
         socket.setDelegate(self, delegateQueue: dispatchQueue)
     }
     
@@ -48,10 +50,18 @@ public class OSCServer: NSObject, GCDAsyncUdpSocketDelegate {
     }
     
     public func changeInPort(port: UInt16) throws {
-        inPort = port
-        if (isListening) {
-            stopListening()
-            try startListening()
+        if (port != inPort) {
+            let listening = isListening
+            inPort = port
+
+            if (listening) {
+                stopListening()
+            }
+            //create a new socket because binding the current socket to a new port is not possible
+            socket = GCDAsyncUdpSocket(self, delegateQueue: dispatchQueue)
+            if (listening) {
+                try startListening()
+            }
         }
     }
 
