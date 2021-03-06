@@ -29,12 +29,12 @@ import CocoaAsyncSocket
 
 public class OSCServer: NSObject, GCDAsyncUdpSocketDelegate {
 
-    private var socket = OSCSocket(with: GCDAsyncUdpSocket())
+    private var socket: GCDAsyncUdpSocket
     private var readData = NSMutableData()
     private var readState = NSMutableDictionary()
     
     /// The delegate which receives debug log messages from this producer.
-    public var delegate: (OSCClientDelegate & OSCPacketDestination)?
+    public var delegate: OSCPacketDestination?
     
     /// The delegate which receives debug log messages from this producer.
     public weak var debugDelegate: OSCDebugDelegate?
@@ -61,22 +61,16 @@ public class OSCServer: NSObject, GCDAsyncUdpSocketDelegate {
         }
     }
         
-    public init(dispatchQueue: DispatchQueue) {
+    public init(dispatchQueue: DispatchQueue = DispatchQueue.main) {
         super.init()
-        let udpSocket = GCDAsyncUdpSocket(delegate: self, delegateQueue: dispatchQueue)
-        socket = OSCSocket(with: udpSocket)
-        try? socket.reusePort(reuse: true)
-    }
-    
-    convenience public override init() {
-        self.init(dispatchQueue: DispatchQueue.main)
+        socket = GCDAsyncUdpSocket(delegate: self, delegateQueue: dispatchQueue)
     }
     
     deinit {
         stopListening()
     }
 
-    public func startListening() throws {
+    public func startListening() {
         do {
             try socket.startListening()
         } catch {
@@ -88,24 +82,7 @@ public class OSCServer: NSObject, GCDAsyncUdpSocketDelegate {
         socket.stopListening()
     }
     
-    public func connect() throws {
-        try socket.connect()
-    }
-    
-    public func disconnect() {
-        socket.disconnect()
-        readData = NSMutableData()
-        readState.setValue(false, forKey: "dangling_ESC")
-    }
-    
     public func send(packet: OSCPacket) {
-        if !socket.isConnected {
-            do {
-                try connect()
-            } catch {
-                debugDelegate?.debugLog("Could not send establish connection to send packet.")
-            }
-        }
         socket.sendUDP(packet: packet)
     }
     
@@ -123,10 +100,6 @@ public class OSCServer: NSObject, GCDAsyncUdpSocketDelegate {
         } catch {
             debugDelegate?.debugLog("Other error: \(error)")
         }
-    }
-    
-    public func udpSocketDidClose(_ sock: GCDAsyncUdpSocket, withError error: Error?) {
-        debugDelegate?.debugLog("UDP Socket: \(sock) Did Close. With Error: \(String(describing: error?.localizedDescription))")
     }
     
 }
